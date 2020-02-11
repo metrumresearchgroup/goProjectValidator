@@ -1,0 +1,28 @@
+{
+  "project" : "Babylon",
+  "scope" : "Provide a tool for programmatically reading in validation files as JSON to establish project requirements, parse JSON Results from tests, and build validation documents",
+  "markdown_directory" : "spec_markdowns",
+  "stories" : [
+    {
+      "name" : "As a developer, I should be able to define my validation programmatically",
+      "tags" : [
+        "programmatic_validation"
+      ],
+      "risk" : "high"
+    },
+    {
+      "name" : "The program should be able to read all json files in a directory to establish test results",
+      "tags" : [
+        "test_results_selection"
+      ],
+      "risk" : "high"
+    },
+    {
+      "name" : "The program should be able to produce templated output",
+      "tags" : [
+        "templated_output"
+      ],
+      "risk" : "low"
+    }
+  ]
+}

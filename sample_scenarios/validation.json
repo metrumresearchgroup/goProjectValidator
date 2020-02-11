@@ -1,28 +1,53 @@
 {
   "project" : "Babylon",
   "scope" : "Provide a tool for programmatically reading in validation files as JSON to establish project requirements, parse JSON Results from tests, and build validation documents",
-  "markdown_directory" : "spec_markdowns",
+  "markdown" : [
+    {
+      "source" : "https://raw.githubusercontent.com/metrumresearchgroup/babylontest/master/markdown/expectations.md"
+    }
+  ],
   "stories" : [
     {
-      "name" : "As a developer, I should be able to define my validation programmatically",
+      "name" : "Babylon should allow users to run NonMem locally",
       "tags" : [
-        "programmatic_validation"
+        "TestBabylonCompletesLocalExecution",
+        "TestBabylonParallelExecution"
       ],
-      "risk" : "high"
+      "risk" : "high",
+      "markdown" : [
+        {
+          "source" : "https://raw.githubusercontent.com/metrumresearchgroup/babylontest/master/markdown/stories/run_jobs_locally.md"
+        }
+      ]
     },
     {
-      "name" : "The program should be able to read all json files in a directory to establish test results",
+      "name" : "Babylon should allow users to run NonMem jobs on the Grid",
       "tags" : [
-        "test_results_selection"
+        "qsub",
+        "qstat",
+        "validate_nonmem_output",
+        "TestBabylonCompletesSGEExecution",
+        "TestBabylonCompletesParallelSGEExecution"
       ],
-      "risk" : "high"
+      "risk" : "high",
+      "markdown" : [
+        {
+          "source" : "https://raw.githubusercontent.com/metrumresearchgroup/babylontest/master/markdown/stories/run_jobs_on_grid.md"
+        }
+      ]
     },
     {
-      "name" : "The program should be able to produce templated output",
+      "name" : "Babylon should notify users of issues with the data referenced in the control stream",
       "tags" : [
-        "templated_output"
+        "TestHasValidPathForCTL",
+        "TestHasInvalidDataPath"
       ],
-      "risk" : "low"
+      "risk" : "low",
+      "markdown" : [
+        {
+          "source" : "https://raw.githubusercontent.com/metrumresearchgroup/babylontest/master/markdown/stories/invalid_data.md"
+        }
+      ]
     }
   ]
 }

@@ -15,7 +15,14 @@
     {{- range .MarkDown}}
         {{- .Content }}
     {{end -}}
-{{end -}}
+{{end }}
+
+##### Test Results
+Test Name | Test Output
+----------|-----------
+    {{- range .Tests }}
+{{ .Test }} | {{ .Output }}
+    {{- end}}
 
 
 {{ end -}}

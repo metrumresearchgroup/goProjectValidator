@@ -2,8 +2,11 @@ package projectvalidator
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
+	"strings"
 )
 
 type ValidationConfiguration struct {
@@ -14,9 +17,9 @@ type ValidationConfiguration struct {
 type Specification struct {
 	Project string `json:"project,omitempty" yaml:"project"`
 	Scope string `json:"scope" yaml:"scope"`
-	Stories []Story `json:"stories,omitempty" yaml:"stories"`
+	Stories []*Story `json:"stories,omitempty" yaml:"stories"`
 	//Markdown is a slice of markdowns to render
-	MarkDown []string `json:"markdown" yaml:"markdown"`
+	MarkDown []*Markdown `json:"markdown" yaml:"markdown"`
 }
 
 type Story struct {
@@ -25,10 +28,10 @@ type Story struct {
 	Tags []string `json:"tags,omitempty" yaml:"tags"`
 	//Risk as a value of Low, High, or Medium
 	Risk string `json:"risk,omitempty" yaml:"risk"`
-	Summary TestSummary `json:"test_summary,omitempty" yaml:"test_summary"`
-	Tests []TestResult `json:"tests,omitempty" yaml:"tests"`
+	Summary *TestSummary `json:"test_summary,omitempty" yaml:"test_summary"`
+	Tests []GoTestResult `json:"tests,omitempty" yaml:"tests"`
 	//Markdown is a slice of markdowns to render
-	MarkDown []string `json:"markdown" yaml:"markdown"`
+	MarkDown []*Markdown `json:"markdown" yaml:"markdown"`
 }
 
 
@@ -56,6 +59,11 @@ type TestSummary struct {
 	FailedTests int `json:"failed_tests,omitempty" yaml:"failed_tests"`
 }
 
+type Markdown struct {
+	Source string `json:"source" yaml:"source"`
+	Content string `json:"content" yaml:"content"`
+}
+
 
 //LoadValidationScenarioFromFile reads the
 func NewSpecification(file io.Reader) (*Specification,error) {
@@ -73,4 +81,61 @@ func NewSpecification(file io.Reader) (*Specification,error) {
 	}
 
 	return &v, nil
+}
+
+
+func ProcessSourceToContent(mdReference *Markdown) error{
+	resp, err := http.Get(mdReference.Source)
+	if err != nil || resp == nil {
+		return err
+	}
+
+	if  resp.StatusCode != 200 {
+		return fmt.Errorf("Invalid response code when attempting to acquire %s", mdReference.Source)
+	}
+
+	bytes, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return err
+	}
+
+	mdReference.Content = string(bytes)
+
+	return nil
+}
+
+func GetTestResultsFromString(input string) ([]GoTestResult,error) {
+	gtrs := []GoTestResult{}
+	lines := strings.Split(input,"\n")
+
+	for _, v := range lines{
+		if strings.Contains(v,"---"){
+			gtr := GoTestResult{}
+			//This is a result line
+			lineBytes := []byte(v)
+			err := json.Unmarshal(lineBytes,&gtr)
+
+			if err != nil {
+				return gtrs, err
+			}
+
+			gtrs = append(gtrs,gtr)
+		}
+	}
+
+
+	return gtrs,nil
+}
+
+func TestsByTag(tag string, tests []GoTestResult) []GoTestResult {
+	var gtrs []GoTestResult
+
+	for _, v := range tests {
+		if strings.ToLower(v.Test) == strings.ToLower(tag){
+			gtrs = append(gtrs,v)
+		}
+	}
+
+	return gtrs
 }

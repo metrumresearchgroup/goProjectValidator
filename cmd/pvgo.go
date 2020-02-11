@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	projectvalidator "github.com/metrumresearchgroup/projectValidator"
 	log "github.com/sirupsen/logrus"
@@ -12,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 )
 
@@ -24,9 +24,10 @@ var pvgoCmd = &cobra.Command{
 for test output. Tests should follow the structure of TestSummary in this package. PVGO will then
 stitch located tests into each story and provide a unified output, tying your stories to their respective tests.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		var locatedTests []projectvalidator.GoTestResult
 		fs := afero.NewOsFs()
 		//Maps by tag all of the test results
-		testMap := make(map[string][]projectvalidator.TestResult)
+		//testMap := make(map[string][]projectvalidator.TestResult)
 		//Codify viper details into the struct
 		var vc projectvalidator.ValidationConfiguration
 
@@ -43,10 +44,17 @@ stitch located tests into each story and provide a unified output, tying your st
 		}
 
 		spec, err := projectvalidator.NewSpecification(file)
-		println(spec.Scope)
 
 		if err != nil {
-			log.Fatalf("Scenario file is listed as %s, but accessing it yielded the following error: %s", vc.ScenarioFile,err)
+			log.Fatalf("%s",err)
+		}
+
+		//Populate content for the specifications
+		for _, v := range spec.MarkDown{
+			err := projectvalidator.ProcessSourceToContent(v)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 
@@ -54,7 +62,6 @@ stitch located tests into each story and provide a unified output, tying your st
 			log.Fatalf("%s is designated as the test outputs directory, but it doesn't appear to exist", vc.TestsDirectory)
 		}
 
-		//var tests []projectvalidator.TestResult
 
 		contents, err := afero.ReadDir(fs,vc.TestsDirectory)
 
@@ -63,96 +70,66 @@ stitch located tests into each story and provide a unified output, tying your st
 		}
 
 		for _, v := range contents {
-			var tr projectvalidator.TestResult
-
-			file, err := fs.Open(filepath.Join(vc.TestsDirectory,v.Name()))
-
-			if err != nil {
-				log.Errorf("Test file listed at %s could not be opened. Details are: %s",filepath.Join(vc.TestsDirectory,v.Name()),err)
-				continue
-			}
-
-			tbytes, err := ioutil.ReadAll(file)
-
-			if err != nil {
-				log.Errorf("Attempting to read the file failed. %s", err)
-				continue
-			}
-
-			err = json.Unmarshal(tbytes,&tr)
-
-			if err != nil {
-				log.Errorf("Unable to marshal the contents! Possibly invalid JSON. %s", err)
-				continue
-			}
-
-			for _, tag := range tr.Tags{
-				//Does the key exist
-				if val, ok := testMap[tag]; !ok {
-					testMap[tag] = []projectvalidator.TestResult{
-						tr,
-					}
-				} else {
-					//If it does. does this test exist in it?
-					matched := false
-					for _, t := range val {
-						if t.Name == tr.Name {
-							matched = true
-						}
-					}
-
-					//If not, add it to the key
-					if ! matched {
-						val = append(val,tr)
-					}
+			if strings.Contains(v.Name(),".json"){
+				//If it's a json file. Let's read all the contents in
+				file, err := os.Open(filepath.Join(vc.TestsDirectory,v.Name()))
+				if err != nil {
+					log.Fatalf("Failure to open file %s", v.Name())
 				}
+
+				bytes, err := ioutil.ReadAll(file)
+				if err != nil {
+					log.Fatal("Unable to read contents of file")
+				}
+
+				file.Close()
+				fileContents := string(bytes)
+
+				//Deal with miscellaneous newlines created by go test json output.
+				newContents := strings.ReplaceAll(fileContents,`\n"`,`"`)
+
+				tests, err := projectvalidator.GetTestResultsFromString(newContents)
+
+				if err != nil {
+					log.Fatalf("An error occurred trying to extract go testing details from the located file. %s", err)
+				}
+
+				locatedTests = append(locatedTests,tests...)
 			}
 		}
 
-		println("Loaded")
-
-		//Now stitch the tests from the map into the stories
-
-		for k, s := range spec.Stories {
-			locals := s
-			for _, tag := range s.Tags {
-				if tests, ok := testMap[tag]; ok {
-					locals.Tests = append(locals.Tests,tests...)
+		//Now we have a listing of tests. Build map of tags we care about
+		for _, v := range spec.Stories{
+			for _, m := range v.MarkDown {
+				err := projectvalidator.ProcessSourceToContent(m)
+				if err != nil {
+					log.Fatal(err)
 				}
 			}
-			spec.Stories[k] = locals
-		}
-
-		//Summarize
-		println("Beginning summarization")
-
-		for k, s := range spec.Stories {
-			locals := s
-			for _, test := range locals.Tests{
-				locals.Summary.TestCount ++
-				if test.Passed {
-					locals.Summary.PassedTests++
-				} else {
-					locals.Summary.FailedTests++
-				}
+			var storytests []projectvalidator.GoTestResult
+			for _, t := range v.Tags {
+				storytests = append(storytests,projectvalidator.TestsByTag(t,locatedTests)...)
 			}
-			spec.Stories[k] = locals
+
+			v.Tests = storytests
 		}
 
-		//pretty, _ := json.MarshalIndent(spec," ", "    ")
-		//
-		//println(string(pretty))
+		log.Info("We've collected tests now!")
 
-		//Try to generate the template
-		t, err := template.New("specification.md.t").ParseFiles("../../specification.md.t")
+		specOutput, err := MarkDownFromScenario("../../specification.md.t",spec)
 
-		buf := new(bytes.Buffer)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		err = t.Execute(buf,spec)
+		println(specOutput)
 
+		testingOutput, err := MarkDownFromScenario("../../testing.md.t",spec)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-
-		println(buf.String())
+		println(testingOutput)
 	},
 }
 
@@ -175,4 +152,21 @@ func init(){
 	const testsDirectoryIdentifier string = "testsDirectory"
 	pvgoCmd.Flags().StringP(testsDirectoryIdentifier,"t","tests", "Specify a directory in which to look for the JSON results of all specified tests")
 	viper.BindPFlag(testsDirectoryIdentifier, pvgoCmd.Flags().Lookup(testsDirectoryIdentifier))
+}
+
+
+func MarkDownFromScenario(markdownfile string, spec *projectvalidator.Specification) (string,error) {
+	t, err := template.New(filepath.Base(markdownfile)).ParseFiles(markdownfile)
+	if err != nil {
+		return "", err
+	}
+
+	buf := new(bytes.Buffer)
+	err = t.Execute(buf,spec)
+
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }

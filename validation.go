@@ -1,4 +1,4 @@
-package projectvalidator
+package goProjectValidator
 
 import (
 	"encoding/json"

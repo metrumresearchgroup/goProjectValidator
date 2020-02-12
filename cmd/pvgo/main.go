@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/metrumresearchgroup/projectValidator/cmd"
+	"github.com/metrumresearchgroup/goProjectValidator/cmd"
 	"github.com/spf13/viper"
 )
 

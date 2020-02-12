@@ -3,7 +3,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	projectvalidator "github.com/metrumresearchgroup/projectValidator"
+	"github.com/metrumresearchgroup/goProjectValidator"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -24,12 +24,12 @@ var pvgoCmd = &cobra.Command{
 for test output. Tests should follow the structure of TestSummary in this package. PVGO will then
 stitch located tests into each story and provide a unified output, tying your stories to their respective tests.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var locatedTests []*projectvalidator.GoTestResult
+		var locatedTests []*goProjectValidator.GoTestResult
 		fs := afero.NewOsFs()
 		//Maps by tag all of the test results
 		//testMap := make(map[string][]projectvalidator.TestResult)
 		//Codify viper details into the struct
-		var vc projectvalidator.ValidationConfiguration
+		var vc goProjectValidator.ValidationConfiguration
 
 		err := viper.Unmarshal(&vc)
 
@@ -43,7 +43,7 @@ stitch located tests into each story and provide a unified output, tying your st
 			log.Fatalf("Unable to open the specification file at %s",vc.ScenarioFile)
 		}
 
-		spec, err := projectvalidator.NewSpecification(file)
+		spec, err := goProjectValidator.NewSpecification(file)
 
 		if err != nil {
 			log.Fatalf("%s",err)
@@ -51,7 +51,7 @@ stitch located tests into each story and provide a unified output, tying your st
 
 		//Populate content for the specifications
 		for _, v := range spec.MarkDown{
-			err := projectvalidator.ProcessSourceToContent(v)
+			err := goProjectValidator.ProcessSourceToContent(v)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -88,7 +88,7 @@ stitch located tests into each story and provide a unified output, tying your st
 				//Deal with miscellaneous newlines created by go test json output.
 				newContents := strings.ReplaceAll(fileContents,`\n"`,`"`)
 
-				tests, err := projectvalidator.GetTestResultsFromString(newContents)
+				tests, err := goProjectValidator.GetTestResultsFromString(newContents)
 
 				if err != nil {
 					log.Fatalf("An error occurred trying to extract go testing details from the located file. %s", err)
@@ -106,14 +106,14 @@ stitch located tests into each story and provide a unified output, tying your st
 		//Now we have a listing of tests. Build map of tags we care about
 		for _, v := range spec.Stories{
 			for _, m := range v.MarkDown {
-				err := projectvalidator.ProcessSourceToContent(m)
+				err := goProjectValidator.ProcessSourceToContent(m)
 				if err != nil {
 					log.Fatal(err)
 				}
 			}
-			var storytests []*projectvalidator.GoTestResult
+			var storytests []*goProjectValidator.GoTestResult
 			for _, t := range v.Tags {
-				storytests = append(storytests,projectvalidator.TestsByTag(t,locatedTests)...)
+				storytests = append(storytests,goProjectValidator.TestsByTag(t,locatedTests)...)
 			}
 
 			v.Tests = storytests
@@ -179,7 +179,7 @@ func init(){
 }
 
 
-func MarkDownFromScenario(markdownfile string, spec *projectvalidator.Specification) (string,error) {
+func MarkDownFromScenario(markdownfile string, spec *goProjectValidator.Specification) (string,error) {
 	t, err := template.New(filepath.Base(markdownfile)).ParseFiles(markdownfile)
 	if err != nil {
 		return "", err

@@ -1,4 +1,4 @@
-module github.com/metrumresearchgroup/projectValidator
+module github.com/metrumresearchgroup/goProjectValidator
 
 go 1.13
 

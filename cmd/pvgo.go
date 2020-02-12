@@ -24,7 +24,7 @@ var pvgoCmd = &cobra.Command{
 for test output. Tests should follow the structure of TestSummary in this package. PVGO will then
 stitch located tests into each story and provide a unified output, tying your stories to their respective tests.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var locatedTests []projectvalidator.GoTestResult
+		var locatedTests []*projectvalidator.GoTestResult
 		fs := afero.NewOsFs()
 		//Maps by tag all of the test results
 		//testMap := make(map[string][]projectvalidator.TestResult)
@@ -98,6 +98,11 @@ stitch located tests into each story and provide a unified output, tying your st
 			}
 		}
 
+		//Set passed bool
+		for _, v := range locatedTests{
+			v.Passed = strings.Contains(v.Output,"--- PASS")
+		}
+
 		//Now we have a listing of tests. Build map of tags we care about
 		for _, v := range spec.Stories{
 			for _, m := range v.MarkDown {
@@ -106,7 +111,7 @@ stitch located tests into each story and provide a unified output, tying your st
 					log.Fatal(err)
 				}
 			}
-			var storytests []projectvalidator.GoTestResult
+			var storytests []*projectvalidator.GoTestResult
 			for _, t := range v.Tags {
 				storytests = append(storytests,projectvalidator.TestsByTag(t,locatedTests)...)
 			}
@@ -122,14 +127,29 @@ stitch located tests into each story and provide a unified output, tying your st
 			log.Fatal(err)
 		}
 
-		println(specOutput)
 
 		testingOutput, err := MarkDownFromScenario("../../testing.md.t",spec)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		println(testingOutput)
+		matrixOutput, err := MarkDownFromScenario("../../matrix.md.t",spec)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = ioutil.WriteFile(filepath.Join(vc.OutputDirectory,"specification.md"),[]byte(specOutput),0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(vc.OutputDirectory,"testing_and_validation.md"),[]byte(testingOutput),0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(vc.OutputDirectory,"traceability_matrix.md"),[]byte(matrixOutput),0755)
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 
@@ -152,6 +172,10 @@ func init(){
 	const testsDirectoryIdentifier string = "testsDirectory"
 	pvgoCmd.Flags().StringP(testsDirectoryIdentifier,"t","tests", "Specify a directory in which to look for the JSON results of all specified tests")
 	viper.BindPFlag(testsDirectoryIdentifier, pvgoCmd.Flags().Lookup(testsDirectoryIdentifier))
+
+	const outputDirectoryIdentifier string = "outputDirectory"
+	pvgoCmd.Flags().StringP(outputDirectoryIdentifier,"o","/tmp/output","The directory into which we wish to place the generated markdown")
+	viper.BindPFlag(outputDirectoryIdentifier, pvgoCmd.Flags().Lookup(outputDirectoryIdentifier))
 }
 
 

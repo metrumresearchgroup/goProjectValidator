@@ -12,6 +12,7 @@ import (
 type ValidationConfiguration struct {
 	ScenarioFile string `json:"scenario_file" yaml:"scenario_file"`
 	TestsDirectory string `json:"tests_directory" yaml:"tests_directory"`
+	OutputDirectory string `json:"output_directory" yaml:"output_directory"`
 }
 
 type Specification struct {
@@ -29,7 +30,7 @@ type Story struct {
 	//Risk as a value of Low, High, or Medium
 	Risk string `json:"risk,omitempty" yaml:"risk"`
 	Summary *TestSummary `json:"test_summary,omitempty" yaml:"test_summary"`
-	Tests []GoTestResult `json:"tests,omitempty" yaml:"tests"`
+	Tests []*GoTestResult `json:"tests,omitempty" yaml:"tests"`
 	//Markdown is a slice of markdowns to render
 	MarkDown []*Markdown `json:"markdown" yaml:"markdown"`
 }
@@ -51,6 +52,7 @@ type GoTestResult struct {
 	Package string
 	Test string
 	Output string
+	Passed bool
 }
 
 type TestSummary struct {
@@ -97,8 +99,8 @@ func ProcessSourceToContent(mdReference *Markdown) error{
 	return nil
 }
 
-func GetTestResultsFromString(input string) ([]GoTestResult,error) {
-	gtrs := []GoTestResult{}
+func GetTestResultsFromString(input string) ([]*GoTestResult,error) {
+	gtrs := []*GoTestResult{}
 	lines := strings.Split(input,"\n")
 
 	for _, v := range lines{
@@ -112,7 +114,7 @@ func GetTestResultsFromString(input string) ([]GoTestResult,error) {
 				return gtrs, err
 			}
 
-			gtrs = append(gtrs,gtr)
+			gtrs = append(gtrs,&gtr)
 		}
 	}
 
@@ -120,8 +122,8 @@ func GetTestResultsFromString(input string) ([]GoTestResult,error) {
 	return gtrs,nil
 }
 
-func TestsByTag(tag string, tests []GoTestResult) []GoTestResult {
-	var gtrs []GoTestResult
+func TestsByTag(tag string, tests []*GoTestResult) []*GoTestResult {
+	var gtrs []*GoTestResult
 
 	for _, v := range tests {
 		if strings.ToLower(v.Test) == strings.ToLower(tag){

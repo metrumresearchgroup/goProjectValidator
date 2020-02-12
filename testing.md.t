@@ -18,6 +18,7 @@
 {{end }}
 
 ##### Test Results
+
 Test Name | Test Output
 ----------|-----------
     {{- range .Tests }}

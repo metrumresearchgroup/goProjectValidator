@@ -85,22 +85,14 @@ func NewSpecification(file io.Reader) (*Specification,error) {
 
 
 func ProcessSourceToContent(mdReference *Markdown) error{
-	resp, err := http.Get(mdReference.Source)
-	if err != nil || resp == nil {
-		return err
-	}
-
-	if  resp.StatusCode != 200 {
-		return fmt.Errorf("Invalid response code when attempting to acquire %s", mdReference.Source)
-	}
-
-	bytes, err := ioutil.ReadAll(resp.Body)
+	resp := &MarkDownResponse{ remoteResource: mdReference}
+	cont, err := resp.Read()
 
 	if err != nil {
 		return err
 	}
 
-	mdReference.Content = string(bytes)
+	mdReference.Content = mdReference.Content + cont
 
 	return nil
 }
@@ -139,3 +131,48 @@ func TestsByTag(tag string, tests []GoTestResult) []GoTestResult {
 
 	return gtrs
 }
+
+type HTTPMarkDownSource struct {
+	Source string
+}
+
+type S3MarkDownSource struct {
+	Source string
+}
+
+type MarkDownResponse struct {
+	remoteResource  MarkDownGetter
+}
+
+type MarkDownGetter interface{
+	Get() (string, error)
+}
+
+type MarkDownResponseReader interface {
+	Read() (string, error)
+}
+
+func (md *Markdown) Get() (string,error){
+	resp, err := http.Get(md.Source)
+	if err != nil || resp == nil {
+		return "", err
+	}
+
+	if  resp.StatusCode != 200 {
+		return "", fmt.Errorf("Invalid response code when attempting to acquire %s", md.Source)
+	}
+
+	bytes, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
+
+func (md *MarkDownResponse) Read() (string, error){
+	return md.remoteResource.Get()
+}
+

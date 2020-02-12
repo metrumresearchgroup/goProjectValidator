@@ -1,4 +1,4 @@
-#goProjectValidator
+# goProjectValidator
 
 GPV is a CLI tool that takes three primary arguments:
 

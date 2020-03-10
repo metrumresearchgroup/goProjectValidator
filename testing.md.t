@@ -1,18 +1,19 @@
 # Validation Specification for {{ .Project  }}
 
 
-{{ if .MarkDown }}
-    {{- range .MarkDown }}
+{{ if .Markdown }}
+    {{- range .Markdown }}
         {{- .Content }}
     {{- end -}}
 {{- end }}
 
 
 ## Stories
+{{ range .Releases}}
 {{ range .Stories }}
 
-{{ if .MarkDown }}
-    {{- range .MarkDown}}
+{{ if .Markdown }}
+    {{- range .Markdown}}
         {{- .Content }}
     {{end -}}
 {{end }}
@@ -27,3 +28,4 @@ Test Name | Test Output
 
 
 {{ end -}}
+{{- end}}

@@ -1,18 +1,20 @@
 # Validation Specification for {{ .Project  }}
 
 
-{{ if .MarkDown }}
-    {{- range .MarkDown }}
+{{ if .Markdown }}
+    {{- range .Markdown }}
         {{- .Content }}
     {{- end -}}
 {{- end }}
 
 
-## Stories
-{{ range .Stories }}
 
-{{ if .MarkDown }}
-    {{- range .MarkDown}}
+{{ range .Releases }}
+## Release {{ .Name }}
+### {{ .Scope }}
+
+{{ if .Markdown }}
+    {{- range .Markdown}}
         {{- .Content }}
     {{end -}}
 {{end -}}

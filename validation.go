@@ -2,10 +2,12 @@ package goProjectValidator
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -17,10 +19,15 @@ type ValidationConfiguration struct {
 
 type Specification struct {
 	Project string `json:"project,omitempty" yaml:"project"`
+	Releases []*Release `json:"releases,omitempty" yaml:"releases"`
+	Markdown []*Markdown `json:"markdown" yaml:"markdown"`
+}
+
+type Release struct {
+	Name string `json:"name,omitempty" yaml:"name"`
 	Scope string `json:"scope" yaml:"scope"`
-	Stories []*Story `json:"stories,omitempty" yaml:"stories"`
-	//Markdown is a slice of markdowns to render
-	MarkDown []*Markdown `json:"markdown" yaml:"markdown"`
+	Markdown []*Markdown `json:"markdown" yaml:"markdown"`
+	Stories []*Story `json:"stories" yaml:"stories"`
 }
 
 type Story struct {
@@ -32,7 +39,7 @@ type Story struct {
 	Summary *TestSummary `json:"test_summary,omitempty" yaml:"test_summary"`
 	Tests []*GoTestResult `json:"tests,omitempty" yaml:"tests"`
 	//Markdown is a slice of markdowns to render
-	MarkDown []*Markdown `json:"markdown" yaml:"markdown"`
+	Markdown []*Markdown `json:"markdown" yaml:"markdown"`
 }
 
 
@@ -64,6 +71,7 @@ type TestSummary struct {
 type Markdown struct {
 	Source string `json:"source" yaml:"source"`
 	Content string `json:"content" yaml:"content"`
+	Retriever func(source string) (string, error)
 }
 
 
@@ -87,8 +95,28 @@ func NewSpecification(file io.Reader) (*Specification,error) {
 
 
 func ProcessSourceToContent(mdReference *Markdown) error{
+
+	if strings.HasPrefix(mdReference.Source,"http"){
+		//Use an HTTP Collector
+		mdReference.Retriever = HTTPRetrieval
+	}
+
+
+	if strings.HasPrefix(mdReference.Source, "file"){
+		//Use a file collector
+		mdReference.Retriever = FileRetrieval
+	}
+
+	if mdReference.Retriever == nil {
+		return errors.New("No valid retrieval function located. Please validate validation json contents")
+	}
+
+
 	resp := &MarkDownResponse{ remoteResource: mdReference}
 	cont, err := resp.Read()
+
+
+
 
 	if err != nil {
 		return err
@@ -155,13 +183,22 @@ type MarkDownResponseReader interface {
 }
 
 func (md *Markdown) Get() (string,error){
-	resp, err := http.Get(md.Source)
+	return md.Retriever(md.Source)
+}
+
+
+func (md *MarkDownResponse) Read() (string, error){
+	return md.remoteResource.Get()
+}
+
+func HTTPRetrieval(source string) (string, error){
+	resp, err := http.Get(source)
 	if err != nil || resp == nil {
 		return "", err
 	}
 
 	if  resp.StatusCode != 200 {
-		return "", fmt.Errorf("Invalid response code when attempting to acquire %s", md.Source)
+		return "", fmt.Errorf("Invalid response code when attempting to acquire %s", source)
 	}
 
 	bytes, err := ioutil.ReadAll(resp.Body)
@@ -173,8 +210,19 @@ func (md *Markdown) Get() (string,error){
 	return string(bytes), nil
 }
 
+func FileRetrieval(source string) (string, error){
+	fileLocation := strings.TrimPrefix(source,"file://")
+	file, err := os.Open(fileLocation)
 
-func (md *MarkDownResponse) Read() (string, error){
-	return md.remoteResource.Get()
+	if err != nil {
+		return "", err
+	}
+
+	contents, err := ioutil.ReadAll(file)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(contents), nil
 }
-

@@ -49,13 +49,34 @@ stitch located tests into each story and provide a unified output, tying your st
 			log.Fatalf("%s",err)
 		}
 
-		//Populate content for the specifications
-		for _, v := range spec.MarkDown{
-			err := goProjectValidator.ProcessSourceToContent(v)
+		//Top level markdowns
+		for _, m := range spec.Markdown {
+			err := goProjectValidator.ProcessSourceToContent(m)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
+
+		//Populate content for the specifications
+		for _, r := range spec.Releases{
+			for _, rm := range r.Markdown{
+				err := goProjectValidator.ProcessSourceToContent(rm)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+
+			//Now for each story within the release
+			for _, s := range r.Stories {
+				for _, sm := range s.Markdown {
+					err := goProjectValidator.ProcessSourceToContent(sm)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}
+			}
+		}
+
 
 
 		if ok, _ := afero.Exists(fs,vc.TestsDirectory); ! ok {
@@ -103,23 +124,22 @@ stitch located tests into each story and provide a unified output, tying your st
 			v.Passed = strings.Contains(v.Output,"--- PASS")
 		}
 
+
+
 		//Now we have a listing of tests. Build map of tags we care about
-		for _, v := range spec.Stories{
-			for _, m := range v.MarkDown {
-				err := goProjectValidator.ProcessSourceToContent(m)
-				if err != nil {
-					log.Fatal(err)
+		for _, r := range spec.Releases {
+			for _, v := range r.Stories{
+				var storytests []*goProjectValidator.GoTestResult
+				for _, t := range v.Tags {
+					storytests = append(storytests,goProjectValidator.TestsByTag(t,locatedTests)...)
 				}
-			}
-			var storytests []*goProjectValidator.GoTestResult
-			for _, t := range v.Tags {
-				storytests = append(storytests,goProjectValidator.TestsByTag(t,locatedTests)...)
+
+				v.Tests = storytests
 			}
 
-			v.Tests = storytests
+			log.Info("We've collected tests now!")
 		}
 
-		log.Info("We've collected tests now!")
 
 		specOutput, err := MarkDownFromScenario("../../specification.md.t",spec)
 

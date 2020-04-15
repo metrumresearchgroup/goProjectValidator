@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type ValidationConfiguration struct {
@@ -113,6 +114,19 @@ func GetTestResultsFromString(input string) ([]*GoTestResult,error) {
 			if err != nil {
 				return gtrs, err
 			}
+
+			//Cleanup the time
+			parseFormat := "2006-01-02T15:04:05"
+			outputFormat := "2 Jan 2006 15:04:05"
+			timeValue := strings.Split(gtr.Time,".")[0]
+
+			t, err  := time.Parse(parseFormat,timeValue)
+
+			if err != nil {
+				return gtrs, err
+			}
+
+			gtr.Time = t.Format(outputFormat)
 
 			gtrs = append(gtrs,&gtr)
 		}

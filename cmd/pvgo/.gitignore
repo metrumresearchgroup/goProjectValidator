@@ -1,1 +1,7 @@
 pvgo
+gpv
+*.json
+*.pdf
+*.md
+testoutput/
+rendered/

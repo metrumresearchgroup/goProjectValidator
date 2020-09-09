@@ -1,5 +1,6 @@
 pvgo
 gpv
+goProjectValidator
 *.json
 *.pdf
 *.md

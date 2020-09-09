@@ -6,3 +6,4 @@ goProjectValidator
 *.md
 testoutput/
 rendered/
+.DS_Store

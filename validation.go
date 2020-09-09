@@ -12,16 +12,25 @@ import (
 
 type ValidationConfiguration struct {
 	ScenarioFile string `json:"scenario_file" yaml:"scenario_file"`
+	CommitsFile string `json:"commits_file" yaml:"commits_file"`
 	TestsDirectory string `json:"tests_directory" yaml:"tests_directory"`
 	OutputDirectory string `json:"output_directory" yaml:"output_directory"`
 }
 
 type Specification struct {
 	Project string `json:"project,omitempty" yaml:"project"`
+	Release string `json:"release,omitempty" yaml:"release"`
+	Commits []CommitInfo `json:"commits,omitempty" yaml:"commits"`
 	Scope string `json:"scope" yaml:"scope"`
 	Stories []*Story `json:"stories,omitempty" yaml:"stories"`
 	//Markdown is a slice of markdowns to render
 	MarkDown []*Markdown `json:"markdown" yaml:"markdown"`
+
+}
+
+type CommitInfo struct {
+	Repo string `json:"repo" yaml:"repo"`
+	Commit string `json:"commit" yaml:"commit"`
 }
 
 type Story struct {
@@ -86,6 +95,21 @@ func NewSpecification(file io.Reader) (*Specification,error) {
 	return &v, nil
 }
 
+//AddCommitInfo reads the commitsFile and appends to spec
+func AddCommitInfo(spec *Specification, commits_file io.Reader) (*Specification,error) {
+	bytes, err := ioutil.ReadAll(commits_file)
+	if err != nil {
+		return spec, err
+	}
+
+	err = json.Unmarshal(bytes, &spec.Commits)
+
+	if err != nil {
+		return &Specification{}, err
+	}
+
+	return spec, nil
+}
 
 func ProcessSourceToContent(mdReference *Markdown) error{
 	resp := &MarkDownResponse{ remoteResource: mdReference}

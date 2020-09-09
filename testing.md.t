@@ -1,29 +1,24 @@
-# Validation Specification for {{ .Project  }}
+# Validation Testing for {{ .Project  }} {{ .Release  }}
+
+{{ .Scope }}
+
+## Test Candidate
+Commit hashes identifying the test candidate for the relevant repositories:
 
 
-{{ if .MarkDown }}
-    {{- range .MarkDown }}
-        {{- .Content }}
-    {{- end -}}
+{{- range .Commits }}
+
+**{{ .Repo }}** {{ .Commit }}
+
+
 {{- end }}
 
+## Tests
 
-## Stories
-{{ range .Stories }}
-
-{{ if .MarkDown }}
-    {{- range .MarkDown}}
-        {{- .Content }}
-    {{end -}}
-{{end }}
-
-##### Test Results
-
-Test Name | Test Output
-----------|-----------
-    {{- range .Tests }}
-{{ .Test }} | {{ .Output }}
-    {{- end}}
-
-
-{{ end -}}
+Test Name | Pass | Date
+----------|------|------
+{{- range .Stories }}
+{{- range .Tests }}
+{{ .Test }} | {{ .Passed }} | {{ .Time }}
+{{- end }}
+{{- end }}

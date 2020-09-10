@@ -1,1 +1,8 @@
 pvgo
+gpv
+goProjectValidator
+*.json
+*.pdf
+*.md
+testoutput/
+rendered/

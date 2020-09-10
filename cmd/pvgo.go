@@ -37,6 +37,7 @@ stitch located tests into each story and provide a unified output, tying your st
 			log.Fatal("Unable to marshal Viper configuration details into struct ")
 		}
 
+		// pull in scenario specification from json
 		file, err := fs.Open(vc.ScenarioFile)
 
 		if err != nil {
@@ -48,6 +49,15 @@ stitch located tests into each story and provide a unified output, tying your st
 		if err != nil {
 			log.Fatalf("%s",err)
 		}
+
+		// pull in commits file from json
+		commits_file, err := fs.Open(vc.CommitsFile)
+
+		if err != nil {
+			log.Fatalf("Unable to open the commits file at %s",vc.CommitsFile)
+		}
+
+		spec, err = goProjectValidator.AddCommitInfo(spec, commits_file)
 
 		//Populate content for the specifications
 		for _, v := range spec.MarkDown{
@@ -168,6 +178,10 @@ func init(){
 	const scenarioFileIdentifier string = "scenarioFile"
 	pvgoCmd.Flags().StringP(scenarioFileIdentifier,"s","scenario.json","Specify the path to a JSON file containing your validation scenario")
 	viper.BindPFlag(scenarioFileIdentifier, pvgoCmd.Flags().Lookup(scenarioFileIdentifier))
+
+	const commitsFileIdentifier string = "commitsFile"
+	pvgoCmd.Flags().StringP(commitsFileIdentifier,"c","commits.json","Specify the path to a JSON file containing commit hashes of relevant repos being validated")
+	viper.BindPFlag(commitsFileIdentifier, pvgoCmd.Flags().Lookup(commitsFileIdentifier))
 
 	const testsDirectoryIdentifier string = "testsDirectory"
 	pvgoCmd.Flags().StringP(testsDirectoryIdentifier,"t","tests", "Specify a directory in which to look for the JSON results of all specified tests")

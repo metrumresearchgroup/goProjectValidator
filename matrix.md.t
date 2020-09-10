@@ -1,4 +1,4 @@
-# Traceability Matrix: {{ .Project }}
+# Traceability Matrix for {{ .Project }} {{ .Release  }}
 
 {{ .Scope }}
 

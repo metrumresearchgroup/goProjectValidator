@@ -1,4 +1,4 @@
-# Validation Specification for {{ .Project  }}
+# Validation Specification for {{ .Project  }} {{ .Release  }}
 
 
 {{ if .MarkDown }}
